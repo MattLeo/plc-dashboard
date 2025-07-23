@@ -1,0 +1,27 @@
+{
+  "authSelections": "userPoolOnly",
+  "resourceName": "plcdashboard",
+  "serviceType": "imported",
+  "region": "us-east-1",
+  "aliasAttributes": [
+    "email"
+  ],
+  "authProvidersUserPool": [],
+  "requiredAttributes": [
+    "preferred_username",
+    "zoneinfo",
+    "email"
+  ],
+  "passwordPolicyMinLength": 8,
+  "passwordPolicyCharacters": [
+    "Requires Lowercase",
+    "Requires Uppercase",
+    "Requires Numbers",
+    "Requires Symbols"
+  ],
+  "mfaConfiguration": "OFF",
+  "autoVerifiedAttributes": [
+    "email"
+  ],
+  "mfaTypes": []
+}
