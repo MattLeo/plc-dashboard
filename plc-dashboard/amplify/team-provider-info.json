@@ -10,6 +10,11 @@
       "StackName": "amplify-plcdashboard-dev-9c4a1",
       "StackId": "arn:aws:cloudformation:us-east-1:154514163892:stack/amplify-plcdashboard-dev-9c4a1/cba80d60-67e7-11f0-934d-12ed5267739b",
       "AmplifyAppId": "d175kvisuax4ef"
+    },
+    "categories": {
+      "auth": {
+        "plcdashboard": {}
+      }
     }
   }
 }
