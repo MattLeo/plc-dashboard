@@ -25,7 +25,7 @@ function App() {
 
       const res = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/records', {
         headers: { 
-          Authorization: token,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
