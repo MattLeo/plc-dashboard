@@ -61,7 +61,7 @@ function App() {
       case 'runtime':
         try{
           const hrs = Math.floor(value / 3600);
-          const min = Math.floor(value / 60);
+          const min = Math.floor((value % 3600) / 60);
           const secs = value % 60;
 
           return [
