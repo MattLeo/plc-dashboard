@@ -112,6 +112,43 @@ function App() {
     return orderedKeys;
   }
 
+  // CSV export functionality
+  const exportToCSV = () => {
+    if (records.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const orderedKeys = getOrderedKeys(records[0]);
+    const header = orderedKeys.map(key => getFriendlyColumnName(key));
+
+    const csvData = records.map(record => {
+      return orderedKeys.map(key => {
+        let value = formatCellValue(key, record[key]);
+
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.included('\n'))) {
+          value = `"${value.replace(/"/g, '""')}"`;
+        }
+
+        return value;
+      });
+    });
+
+    const csvContent = [header, ...csvData].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', `plc-dashboard-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const fetchRecords = async () => {
     try {
       setLoading(true);
@@ -221,7 +258,7 @@ function App() {
         </div>
       </div>
 
-      {/* Refresh Button */}
+      {/* Refreshand Export buttons*/}
       <div style={{ marginBottom: '20px' }}>
         <button 
           onClick={fetchRecords}
@@ -237,6 +274,22 @@ function App() {
           }}
         >
           {loading ? 'Loading...' : 'Refresh Data'}
+        </button>
+
+        <button 
+          onClick={exportToCSV}
+          disabled={records.length === 0}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: records.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: records.length === 0 ? 0.6 : 1
+          }}
+        >
+          Export to CSV ({records.length} records)
         </button>
       </div>
 
