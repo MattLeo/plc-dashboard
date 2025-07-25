@@ -58,6 +58,21 @@ function App() {
         return typeof value === 'string' 
         ? (value === 'B' ? 'Baler' : 'Compactor') 
         : value;
+      case 'runtime':
+        try{
+          const hrs = Math.floor(value / 3600);
+          const min = Math.floor(value / 60);
+          const secs = value % 60;
+
+          return [
+            hrs.toString().padStart(2, '0'),
+            min.toString().padStart(2, '0'),
+            secs.toString().padStart(2, '0')
+          ].join(':');
+          
+        } catch {
+          return typeof value === 'object' ? JSON.stringify(value) : String(value);
+        }
       default:
         return typeof value === 'object' ? JSON.stringify(value) : String(value);
     }
