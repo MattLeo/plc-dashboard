@@ -243,14 +243,13 @@ function App() {
             }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa' }}>
-                  {/* Dynamically create headers based on first record */}
-                  {records[0] && Object.keys(records[0]).map(key => (
+                  {orderedKeys.map(key => (
                     <th key={key} style={{ 
                       padding: '12px',
                       textAlign: 'left',
                       borderBottom: '2px solid #dee2e6',
                       fontWeight: 'bold',
-                      whitespace: 'nowrap'
+                      whiteSpace: 'nowrap'
                     }}>
                       {getFriendlyColumnName(key)}
                     </th>
