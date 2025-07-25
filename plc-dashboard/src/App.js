@@ -59,7 +59,7 @@ function App() {
         ? (value === 'B' ? 'Baler' : 'Compactor') 
         : value;
       default:
-        return value;
+        return typeof value === 'object' ? JSON.stringify(value) : String(value);
     }
   };
 
