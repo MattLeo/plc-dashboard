@@ -249,7 +249,7 @@ function App() {
                       textAlign: 'left',
                       borderBottom: '2px solid #dee2e6',
                       fontWeight: 'bold',
-                      whiteSpace: 'nowrap'
+                      //whiteSpace: 'nowrap'
                     }}>
                       {getFriendlyColumnName(key)}
                     </th>
