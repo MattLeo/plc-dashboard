@@ -11,8 +11,19 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const timezone = () => {
+    const date = new Date();
+    const options = {timeZoneName: 'short'};
+
+    const formatter = new Intl.DateTimeFormat('en-US', options);
+    const parts = formatter.formatToParts(date);
+
+    const tzPart = parts.find(part => part.type === 'timeZoneName');
+    return tzPart ? tzPart.value : 'N/A';
+  };
+
   const columnMappings = {
-    'timestamp': 'Date & Time',
+    'timestamp': `Date & Time (${timezone})`,
     'machineType': 'Machine Type',
     'numStarts': 'Number of Starts',
     'cycles': 'Number of Cycles',
