@@ -11,6 +11,81 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const columnMappings = {
+    'timestamp': 'Date & Time',
+    'machineType': 'Machine Type',
+    'numStarts': 'Number of Starts',
+    'cycles': 'Number of Cycles',
+    'deviceId': 'Serial Number',
+    'runtime': 'Runtime (Seconds)',
+    'numBales': 'Bales Produced',
+    'maxPressure': 'Max Pressure (PSI)',
+    'lowMagSwitchFailed': 'Lower Mag Switch Failed',
+    'upMagSwitchFailed': 'Upper Mag Switch Failed',
+    'full': 'Full Bale Alert',
+    'balerMode': 'Mode Setting'
+  };
+
+  const balerColumnOrder = [
+    'timestamp',
+    'machineType',
+    'deviceId',
+    'balerMode',
+    'numStarts',
+    'cycles',
+    'runtime',
+    'numBales',
+    'maxPressure',
+    'full',
+    'lowMagSwitchFailed',
+    'upMagSwitchFailed'
+  ];
+
+  const formatCellValue = (key, value) => {
+    if (value === null || value === undefined) return 'N/A';
+
+    switch (key) {
+      case 'timestamp':
+        try {
+          const date = new Date(value);
+          return date.toLocaleString();
+        } catch {
+          return value;
+        }
+      case 'maxPressure':
+        return typeof value === 'number' ? `${value.toFixed(0)} PSI` : value;
+      case 'machineType':
+        return typeof value === 'string' 
+        ? (value === 'B' ? 'Baler' : 'Compactor') 
+        : value;
+      default:
+        return value;
+    }
+  };
+
+  const getFriendlyColumnName = (key) => {
+    return columnMappings[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+  };
+
+  const getOrderedKeys = (record) => {
+    const recordKeys = Object.keys(record);
+    const orderedKeys = [];
+
+    balerColumnOrder.forEach(key => {
+      if (recordKeys.includes(key)) {
+        orderedKeys.push(key);
+      }
+    });
+
+    recordKeys.forEach(key => {
+      if(!orderedKeys.includes(key)) {
+        orderedKeys.push(key);
+      }
+    });
+
+    return orderedKeys;
+  }
+
   const fetchRecords = async () => {
     try {
       setLoading(true);
@@ -85,6 +160,8 @@ function App() {
       </div>
     );
   }
+
+  const orderedKeys = records.length > 0 ? getOrderedKeys(records[0]) : [];
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -172,9 +249,10 @@ function App() {
                       padding: '12px',
                       textAlign: 'left',
                       borderBottom: '2px solid #dee2e6',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
+                      whitespace: 'nowrap'
                     }}>
-                      {key}
+                      {getFriendlyColumnName(key)}
                     </th>
                   ))}
                 </tr>
@@ -183,14 +261,14 @@ function App() {
                 {records.map((record, index) => (
                   <tr key={index} style={{ 
                     borderBottom: '1px solid #dee2e6',
-                    '&:hover': { backgroundColor: '#f8f9fa' }
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
                   }}>
-                    {Object.values(record).map((value, i) => (
-                      <td key={i} style={{ 
+                    {orderedKeys.map(key => (
+                      <td key={key} style={{ 
                         padding: '12px',
                         verticalAlign: 'top'
                       }}>
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        {formatCellValue(key, record[key])}
                       </td>
                     ))}
                   </tr>
