@@ -11,8 +11,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const timezone = () => {
-    const date = new Date();
+  const getTimezone = (date) => {
     const options = {timeZoneName: 'short'};
 
     const formatter = new Intl.DateTimeFormat('en-US', options);
@@ -23,7 +22,7 @@ function App() {
   };
 
   const columnMappings = {
-    'timestamp': `Date & Time (${timezone})`,
+    'timestamp': `Date & Time (${getTimezone(new Date())})`,
     'machineType': 'Machine Type',
     'numStarts': 'Number of Starts',
     'cycles': 'Number of Cycles',
