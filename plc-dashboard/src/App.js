@@ -17,7 +17,7 @@ function App() {
     'numStarts': 'Number of Starts',
     'cycles': 'Number of Cycles',
     'deviceId': 'Serial Number',
-    'runtime': 'Runtime (Seconds)',
+    'runtime': 'Runtime (HH:MM:SS)',
     'numBales': 'Bales Produced',
     'maxPressure': 'Max Pressure (PSI)',
     'lowMagSwitchFailed': 'Lower Mag Switch Failed',
@@ -60,9 +60,10 @@ function App() {
         : value;
       case 'runtime':
         try{
-          const hrs = Math.floor(value / 3600);
-          const min = Math.floor((value % 3600) / 60);
-          const secs = value % 60;
+          const time = value / 1000; //Added to account for time miscalc in the cycle Lambda
+          const hrs = Math.floor(time / 3600);
+          const min = Math.floor((time % 3600) / 60);
+          const secs = time % 60;
 
           return [
             hrs.toString().padStart(2, '0'),
