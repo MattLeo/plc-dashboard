@@ -626,25 +626,34 @@ function App() {
                         fontWeight: 'bold',
                         userSelect: 'none',
                         position: 'relative', // for positioning the sort icon
-                        backgroundColor: sortConfig.key === key ? '#e9ecef' : 'inherit'
+                        backgroundColor: sortConfig.key === key ? '#e9ecef' : 'inherit',
+                        verticalAlign: 'bottom',
+                        paddingBottom: '4px'
                         //whiteSpace: 'nowrap'
                       }}
                     >
                       <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between'
-                        }}>
-                        <span>{getFriendlyColumnName(key)}</span>
-                        <span 
-                          onClickCapture={() => handleSort(key)}
-                          title={`Click to sort by ${getFriendlyColumnName(key)}`}  
-                          style={{ marginleft: '8px', opacity: 0.7, cursor: 'pointer'}}>
-                            {getSortIcon(key)}
-                        </span>
-                      </div>
-                      <div>
-                        {getFilterComponent(key)}
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        height: '100%'
+                      }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}>
+                          <span>{getFriendlyColumnName(key)}</span>
+                          <span 
+                            onClickCapture={() => handleSort(key)}
+                            title={`Click to sort by ${getFriendlyColumnName(key)}`}  
+                            style={{ marginleft: '8px', opacity: 0.7, cursor: 'pointer'}}>
+                              {getSortIcon(key)}
+                          </span>
+                        </div>
+                        <div>
+                          {getFilterComponent(key)}
+                        </div>
                       </div>
                     </th>
                   ))}
