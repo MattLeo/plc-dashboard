@@ -12,6 +12,8 @@ function App() {
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({key: null, direction: 'asc'});
   const [filters, setFilters] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(25);
 
   const getTimezone = (date) => {
     const options = {timeZoneName: 'short'};
@@ -283,6 +285,190 @@ function App() {
     );
   };
 
+  // Pagination functions
+  const getPaginatedRecords = () => {
+    const sortedAndFilteredRecords = getSortedAndFilteredRecords();
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = (startIndex + recordsPerPage);
+    return sortedAndFilteredRecords.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    const filteredRecords = getSortedAndFilteredRecords();
+    return Math.ceil(filteredRecords.length / recordsPerPage);
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    document.querySelector('table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleRecordsPerPageChange = (newRecordsPerPage) => {
+    setRecordsPerPage(newRecordsPerPage);
+    setCurrentPage(1);
+  };
+
+  const paginationControls = () => {
+    const totalPages = getTotalPages();
+    const filteredRecordsCount = getSortedAndFilteredRecords().length;
+
+    if (totalPages <= 1) return null;
+
+    const getVisiblePageNumbers = () => {
+      const delta = 2;
+      const range = [];
+      const rangeWithDots = [];
+
+      for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+        range.push(i);
+      }
+
+      if (currentPage - delta > 2) {
+        rangeWithDots.push(1, '...');
+      } else {
+        rangeWithDots.push(1); 
+      }
+
+      rangeWithDots.push(...range);
+
+      if (currentPage + delta < totalPages - 1) {
+        rangeWithDots.push('...', totalPages);
+      } else {
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+  
+    const visiblePages = getVisiblePageNumbers();
+    const startRecord = (currentPage - 1) * recordsPerPage + 1;
+    const endRecord = Math.min(currentPage * recordsPerPage, filteredRecordsCount);
+
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '20px',
+        padding: '15px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '4px',
+        flexWrap: 'wrap',
+        gap: '10px',
+      }}>
+        {/*Records per page selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <span style={{ fontsize: '14px' }}>Show:</span>
+          <select
+            value={recordsPerPage}
+            onChange={(e) => handleRecordsPerPageChange(Number(e.target.value))}
+            style={{
+              padding:'4px 8px',
+              border: '1px soliu #ccc',
+              borderRadius: '3px',
+              fontSize: '14px'
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span style={{ fontSize: '14px'}}>Records per page</span>
+        </div>
+        {/* Page Info*/}
+        <div style={{ fontsize: '14px', color: '#666' }}>
+          Showing {startRecord}-{endRecord} of {filteredRecordsCount} records
+        </div>
+        {/* Pagination buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px'}}>
+          <button
+            onClick={() => handlePageChange(1)}
+            disabled={currentPage === 1}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              backgroundColor: currentPage === 1 ? '#f8f9fa' : 'white',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              borderRadius: '3px',
+              fontSize: '14px'
+            }}
+          >
+            First
+          </button>
+          
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              backgroundColor: currentPage === 1 ? '#f8f9fa' : 'white',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              borderRadius: '3px',
+              fontSize: '14px'
+            }}
+          >
+            Previous
+          </button>
+
+          {visiblePages.map((page, index) => (
+            page === '...' ? (
+              <span key={index} style={{ padding: '6px 10px', fontSize: '14px' }}>...</span>
+            ) : (
+              <button
+                key={index}
+                onClick={() => handlePageChange(page)}
+                style={{
+                  padding: '6px 10px',
+                  border: '1px solid #ccc',
+                  backgroundColor: currentPage === page ? '#007bff' : 'white',
+                  color: currentPage === page ? 'white' : 'black',
+                  cursor: 'pointer',
+                  borderRadius: '3px',
+                  fontSize: '14px',
+                  fontWeight: currentPage === page ? 'bold' : 'normal'
+                }}
+              >
+                {page}
+              </button>
+            )
+          ))}
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              backgroundColor: currentPage === totalPages ? '#f8f9fa' : 'white',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              borderRadius: '3px',
+              fontSize: '14px'
+            }}
+          >
+            Next
+          </button>
+
+          <button
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              backgroundColor: currentPage === totalPages ? '#f8f9fa' : 'white',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              borderRadius: '3px',
+              fontSize: '14px'
+            }}
+          >
+            Last
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // CSV export functionality
   const exportToCSV = () => {
     const sortedAndFilteredRecords = getSortedAndFilteredRecords();
@@ -456,6 +642,7 @@ function App() {
   }
 
   const sortedAndFilteredRecords = getSortedAndFilteredRecords();
+  const totalFilteredRecords = sortedAndFilteredRecords.length;
   const orderedKeys = records.length > 0 ? getOrderedKeys(records[0]) : [];
   const activeFilterCount = Object.keys(filters).filter(key => filters[key] 
     && filters[key] !== '' && filters[key] !== 'all').length;
@@ -512,7 +699,7 @@ function App() {
 
         <button 
           onClick={exportToCSV}
-          disabled={sortedAndFilteredRecords.length === 0}
+          disabled={totalFilteredRecords === 0}
           style={{
             padding: '10px 20px',
             backgroundColor: '#28a745',
@@ -520,11 +707,11 @@ function App() {
             border: 'none',
             marginLeft: '10px',
             borderRadius: '4px',
-            cursor: records.length === 0 ? 'not-allowed' : 'pointer',
-            opacity: records.length === 0 ? 0.6 : 1
+            cursor: totalFilteredRecords === 0 ? 'not-allowed' : 'pointer',
+            opacity: totalFilteredRecords === 0 ? 0.6 : 1
           }}
         >
-          Export to CSV ({sortedAndFilteredRecords.length} records)
+          Export to CSV ({totalFilteredRecords} records)
         </button>
       </div>
 
@@ -601,10 +788,10 @@ function App() {
 
       {/* Records Table */}
       <div>
-        <h2>Records ({sortedAndFilteredRecords.length} of {records.length})</h2>
+        <h2>Records ({totalFilteredRecords} of {records.length}) - Page {currentPage} of {getTotalPages()}</h2>
         {records.length === 0 ? (
           <p>No records found.</p>
-        ) : sortedAndFilteredRecords.length === 0 ? (
+        ) : totalFilteredRecords === 0 ? (
           <p>No records match the current filters.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -660,7 +847,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {sortedAndFilteredRecords.map((record, index) => ( //Flagging this
+                {getPaginatedRecords.map((record, index) => ( //Flagging this
                   <tr key={index} style={{ 
                     borderBottom: '1px solid #dee2e6',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
@@ -679,6 +866,7 @@ function App() {
             </table>
           </div>
         )}
+        <paginationControlls/>
       </div>
     </div>
   );
