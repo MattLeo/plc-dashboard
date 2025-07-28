@@ -10,6 +10,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortConfig, setSortConfig] = useState({key: null, direction: 'asc'});
 
   const getTimezone = (date) => {
     const options = {timeZoneName: 'short'};
@@ -223,7 +224,64 @@ function App() {
       </div>
     );
   }
+  // Sorting and ordering functions
+  const getSortValue = (record, key) => {
+    const value = record[key];
 
+    switch (key) {
+      case 'timestamp':
+        return new Date(value).getTime();
+      case 'maxPressure':
+      case 'numStarts':
+      case 'cycles':
+      case 'numBales':
+      case 'runtime':
+      case 'deviceId':
+        return typeof value === 'number' ? value : 0;
+      case 'machineType':
+      case 'balerMode':
+        return typeof value === 'string' ? value.toLowerCase() : '';
+      case 'lowMagSwitchFailed':
+      case 'upMagSwitchFailed':
+      case 'full':
+        if (typeof value === 'boolean') return value ? 1 : 0;
+        if (typeof value === 'string') return value.toLowerCase();
+        return String(value).toLowerCase();
+      default:
+        if (typeof value === 'string') return value.toLowerCase();
+        if (typeof value === 'number') return value;
+        if (typeof value === 'boolean') return value? 1: 0;
+    }
+  };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({key, direction});
+  };
+
+  const getSortedRecords = () => {
+    if (!sortConfig.key) return records;
+
+    return [...records].sort((a, b) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+ 
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return '↕️'; // default sorting Icon
+    return sortConfig.direction === 'asc' ? '▲' : '▼';
+  }
+
+  const sortedRecords = getSortedRecords();
   const orderedKeys = records.length > 0 ? getOrderedKeys(records[0]) : [];
 
   return (
@@ -284,6 +342,7 @@ function App() {
             backgroundColor: '#28a745',
             color: 'white',
             border: 'none',
+            marginleft: '12px',
             borderRadius: '4px',
             cursor: records.length === 0 ? 'not-allowed' : 'pointer',
             opacity: records.length === 0 ? 0.6 : 1
@@ -292,6 +351,34 @@ function App() {
           Export to CSV ({records.length} records)
         </button>
       </div>
+
+      {/* Sorting Info */}
+      {sortConfig.key && (
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#e7f3ff',
+          border: '1px solid #b3d9ff',
+          borderRadius: '4px',
+          marginBottom: '14px'
+        }}>
+          Sorting by: {getFriendlyColumnName(sortConfig.key)} ({sortConfig.direction === 'asc'? 'Ascending' : 'Descending'})
+          <button
+            onClick={() => setSortConfig({key: null, direction: 'asc'})}
+            style={{
+              marginLeft: '10px',
+              padding: '2px 8px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            Clear Sort
+          </button>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -323,20 +410,38 @@ function App() {
               <thead>
                 <tr style={{ backgroundColor: '#f8f9fa' }}>
                   {orderedKeys.map(key => (
-                    <th key={key} style={{ 
-                      padding: '12px',
-                      textAlign: 'left',
-                      borderBottom: '2px solid #dee2e6',
-                      fontWeight: 'bold',
-                      //whiteSpace: 'nowrap'
-                    }}>
-                      {getFriendlyColumnName(key)}
+                    <th 
+                      key={key}
+                      onClickCapture={() => handleSort(key)} 
+                      style={{ 
+                        padding: '12px',
+                        textAlign: 'left',
+                        borderBottom: '2px solid #dee2e6',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        position: 'relative', // for positioning the sort icon
+                        backgroundColor: sortConfig.key === key ? '#e9ecef' : 'inherit'
+                        //whiteSpace: 'nowrap'
+                      }}
+                      title={`Click to sort by ${getFriendlyColumnName(key)}`}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>{getFriendlyColumnName(key)}</span>
+                        <span style={{ marginleft: '8px', opacity: 0.7}}>
+                          {getSortIcon(key)}
+                        </span>
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {records.map((record, index) => (
+                {sortedRecords.map((record, index) => (
                   <tr key={index} style={{ 
                     borderBottom: '1px solid #dee2e6',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
