@@ -11,6 +11,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({key: null, direction: 'asc'});
+  const [filters, setFilters] = useState({});
 
   const getTimezone = (date) => {
     const options = {timeZoneName: 'short'};
@@ -113,17 +114,166 @@ function App() {
     return orderedKeys;
   }
 
+  // Filtering functions
+  const getFilteredRecords = () => {
+    return records.filter(record => {
+      return Object.keys(filters).every(key => {
+        const filterValue = filters[key];
+        const recordValue = record[key];
+
+        // Skipping empty filters
+        if (!filters || filterValue === '' || filterValue === 'all') {
+          return true;
+        }
+
+        switch (key) {
+          case 'timestamp':
+            const recordDate = new Date(recordValue).toLocaleDateString();
+            return recordDate.toLocaleLowerCase().includes(filterValue.toLocaleLowerCase()); 
+          case 'deviceId':
+          case 'balerMode':
+            return String(recordValue).toLowerCase().includes(filterValue.toLowerCase());
+          case 'machineType':
+            const displayValue = recordValue === 'B' ? 'Baler' : 'Compactor';
+            return displayValue.toLowerCase().includes(filterValue.toLowerCase());
+          case 'lowMagSwitchFailed':
+          case 'upMagSwitchFailed':
+          case 'full':
+            if (filterValue === 'true') return recordValue === 'true';
+            if (filterValue === 'false') return recordValue === 'false';
+            return true;
+          case 'numStarts':
+          case 'cycles':
+          case 'numBales':
+          case 'maxPressure':
+            if (filterValue.includes('-')) {
+              const [min, max] = filterValue.split('-').map(v => parseFloat(v.trim()));
+              const numValue = parseFloat(recordValue);
+              return numValue >= min && numValue <= max;
+            } else {
+              return String(recordValue).includes(filterValue);
+            }
+          default:
+              return String(recordValue).toLowerCase().includes(filterValue.toLowerCase());
+        }
+      })
+    })
+  }
+
+  const getSortedAndFilteredRecords = () => {
+    const filteredRecords = getFilteredRecords();
+
+    if (!sortConfig.key) return filteredRecords;
+
+    return [...filteredRecords].sort((a,b) => {
+      const aValue = getSortValue(a, sortConfig.key);
+      const bValue = getSortValue(b, sortConfig.key);
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : 1;
+      }
+      return 0;
+    })
+  };
+
+  const updateFilter = (key, value) => {
+    setFilters(prev => ({...prev, [key]: value}));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({});
+  };
+
+  const getFilterComponent = (key) => {
+    const currentFilter = filters[key] || '';
+
+    if (['lowMagSwitchFailed', 'upMagSwitchFailed', 'full'].includes(key)) {
+      return (
+        <select
+          value={currentFilter}
+          onChange={(e) => updateFilter(key, e.target.value)}
+          style={{
+            width: '100%',
+            padding: '4px',
+            fontSize: '12px',
+            border: '1px solid #ccc',
+            borderRadius: '3px',
+            marginTop: '4px'
+          }}
+        >
+          <option value="">All</option>
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      );
+    }
+
+    // Machine type gets a dropdown
+    if (key === 'machineType') {
+      return (
+        <select
+          value={currentFilter}
+          onChange={(e) => updateFilter(key, e.target.value)}
+          style={{
+            width: '100%',
+            padding: '4px',
+            fontSize: '12px',
+            border: '1px solid #ccc',
+            borderRadius: '3px',
+            marginTop: '4px'
+          }}
+        >
+          <option value="">All</option>
+          <option value="baler">Baler</option>
+          <option value="compactor">Compactor</option>
+        </select>
+      );
+    }
+
+    // All other columns get text input
+    let placeholder = 'Filter...';
+    if (['numStarts', 'cycles', 'numBales', 'maxPressure'].includes(key)) {
+      placeholder = 'e.g. 10 or 10-20';
+    } else if (key === 'deviceId') {
+      placeholder = 'Serial number...';
+    } else if (key === 'timestamp') {
+      placeholder = 'Date...';
+    }
+
+    return (
+      <input
+        type="text"
+        value={currentFilter}
+        onChange={(e) => updateFilter(key, e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          padding: '4px',
+          fontSize: '12px',
+          border: '1px solid #ccc',
+          borderRadius: '3px',
+          marginTop: '4px'
+        }}
+      />
+    );
+  };
+
   // CSV export functionality
   const exportToCSV = () => {
+    const sortedAndFilteredRecords = getSortedAndFilteredRecords();
+
     if (records.length === 0) {
       alert('No data to export');
       return;
     }
 
-    const orderedKeys = getOrderedKeys(records[0]);
+    const orderedKeys = getOrderedKeys(sortedAndFilteredRecords[0]);
     const header = orderedKeys.map(key => getFriendlyColumnName(key));
 
-    const csvData = records.map(record => {
+    const csvData = sortedAndFilteredRecords.map(record => {
       return orderedKeys.map(key => {
         let value = formatCellValue(key, record[key]);
 
@@ -262,6 +412,7 @@ function App() {
     setSortConfig({key, direction});
   };
 
+  /*
   const getSortedRecords = () => {
     if (!sortConfig.key) return records;
 
@@ -275,15 +426,18 @@ function App() {
     });
  
   };
+  */
 
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return '↕️'; // default sorting Icon
     return sortConfig.direction === 'asc' ? '▲' : '▼';
   }
 
-  const sortedRecords = getSortedRecords();
+  const sortedAndFilteredRecords = getSortedAndFilteredRecords();
   const orderedKeys = records.length > 0 ? getOrderedKeys(records[0]) : [];
-
+  const activeFilterCount = Object.keys(filters).filter(key => filters[key] 
+    && filters[key] !== '' && filters[key] !== 'all').length;
+    
   return (
     <div style={{ padding: '20px', maxWidth: '1500px', margin: '0 auto' }}>
       {/* Header */}
@@ -336,36 +490,38 @@ function App() {
 
         <button 
           onClick={exportToCSV}
-          disabled={records.length === 0}
+          disabled={sortedAndFilteredRecords.length === 0}
           style={{
             padding: '10px 20px',
             backgroundColor: '#28a745',
             color: 'white',
             border: 'none',
-            marginleft: '12px',
+            marginLeft: '10px',
             borderRadius: '4px',
             cursor: records.length === 0 ? 'not-allowed' : 'pointer',
             opacity: records.length === 0 ? 0.6 : 1
           }}
         >
-          Export to CSV ({records.length} records)
+          Export to CSV ({sortedAndFilteredRecords.length} records)
         </button>
       </div>
 
-      {/* Sorting Info */}
-      {sortConfig.key && (
-        <div style={{
-          padding: '15px',
-          backgroundColor: '#e7f3ff',
-          border: '1px solid #b3d9ff',
-          borderRadius: '4px',
-          marginBottom: '14px'
-        }}>
-          Sorting by: {getFriendlyColumnName(sortConfig.key)} ({sortConfig.direction === 'asc'? 'Ascending' : 'Descending'})
-          <button
-            onClick={() => setSortConfig({key: null, direction: 'asc'})}
+      {/* Sorting and Filtering Info */}
+      <div style={{ marginBottom: '15px'}}>
+        {activeFilterCount > 0 && (
+          <div style={{
+            marginBottom: '10px',
+            padding: '8px 12px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffecb5',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}>
+            Active Filters: {activeFilterCount}
+            <button
+            onClick={clearAllFilters}
             style={{
-              marginLeft: '10px',
+              marginLeft: '18px',
               padding: '2px 8px',
               backgroundColor: '#dc3545',
               color: 'white',
@@ -374,11 +530,38 @@ function App() {
               cursor: 'pointer',
               fontSize: '12px'
             }}
-          >
-            Clear Sort
-          </button>
-        </div>
-      )}
+            >
+              Clear All Filters
+            </button>
+          </div>
+        )}
+        {sortConfig.key && (
+          <div style={{
+            padding: '15px',
+            backgroundColor: '#e7f3ff',
+            border: '1px solid #b3d9ff',
+            borderRadius: '4px',
+            marginBottom: '14px'
+          }}>
+            Sorting by: {getFriendlyColumnName(sortConfig.key)} ({sortConfig.direction === 'asc'? 'Ascending' : 'Descending'})
+            <button
+              onClick={() => setSortConfig({key: null, direction: 'asc'})}
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              Clear Sort
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Error Message */}
       {error && (
@@ -396,9 +579,11 @@ function App() {
 
       {/* Records Table */}
       <div>
-        <h2>Records ({records.length})</h2>
+        <h2>Records ({sortedAndFilteredRecords.length} of {records.length})</h2>
         {records.length === 0 ? (
           <p>No records found.</p>
+        ) : sortedAndFilteredRecords.length === 0 ? (
+          <p>No records match the current filters.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ 
@@ -436,12 +621,13 @@ function App() {
                           {getSortIcon(key)}
                         </span>
                       </div>
+                      {getFilterComponent(key)}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {sortedRecords.map((record, index) => (
+                {sortedAndFilteredRecords.map((record, index) => ( //Flagging this
                   <tr key={index} style={{ 
                     borderBottom: '1px solid #dee2e6',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
