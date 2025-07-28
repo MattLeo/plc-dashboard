@@ -285,7 +285,7 @@ function App() {
   const orderedKeys = records.length > 0 ? getOrderedKeys(records[0]) : [];
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1500px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
