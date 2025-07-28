@@ -248,7 +248,7 @@ function App() {
             marginTop: '4px'
           }}
         >
-          <option value="Autmoatic">Automatic</option>
+          <option value="Automatic">Automatic</option>
           <option value="Manual Up">Manual Up</option>
           <option value="Manual Down">Manual Down</option>
         </select>
@@ -643,7 +643,9 @@ function App() {
                             {getSortIcon(key)}
                         </span>
                       </div>
+                      <span style={{alignItems: 'bottom'}}>
                       {getFilterComponent(key)}
+                      </span>
                     </th>
                   ))}
                 </tr>
