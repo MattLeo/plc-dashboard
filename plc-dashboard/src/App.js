@@ -643,7 +643,7 @@ function App() {
                             {getSortIcon(key)}
                         </span>
                       </div>
-                      <span style={{alignItems: 'bottom'}}>
+                      <span style={{alignItems: 'end'}}>
                       {getFilterComponent(key)}
                       </span>
                     </th>
