@@ -233,6 +233,28 @@ function App() {
       );
     }
 
+    // Mode gets a dropdown
+    if (key === 'balerMode') {
+      return (
+        <select
+          value={currentFilter}
+          onChange={(e) => updateFilter(key, e.target.value)}
+          style={{
+            width: '100%',
+            padding: '4px',
+            fontSize: '12px',
+            border: '1px solid #ccc',
+            borderRadius: '3px',
+            marginTop: '4px'
+          }}
+        >
+          <option value="Autmoatic">Automatic</option>
+          <option value="Manual Up">Manual Up</option>
+          <option value="Manual Down">Manual Down</option>
+        </select>
+      );
+    }
+
     // All other columns get text input
     let placeholder = 'Filter...';
     if (['numStarts', 'cycles', 'numBales', 'maxPressure'].includes(key)) {
@@ -602,7 +624,6 @@ function App() {
                         textAlign: 'left',
                         borderBottom: '2px solid #dee2e6',
                         fontWeight: 'bold',
-                        cursor: 'pointer',
                         userSelect: 'none',
                         position: 'relative', // for positioning the sort icon
                         backgroundColor: sortConfig.key === key ? '#e9ecef' : 'inherit'
@@ -618,7 +639,7 @@ function App() {
                         <span 
                           onClickCapture={() => handleSort(key)}
                           title={`Click to sort by ${getFriendlyColumnName(key)}`}  
-                          style={{ marginleft: '8px', opacity: 0.7}}>
+                          style={{ marginleft: '8px', opacity: 0.7, cursor: 'pointer'}}>
                             {getSortIcon(key)}
                         </span>
                       </div>
