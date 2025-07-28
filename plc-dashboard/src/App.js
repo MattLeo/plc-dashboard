@@ -126,7 +126,7 @@ function App() {
       return orderedKeys.map(key => {
         let value = formatCellValue(key, record[key]);
 
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.included('\n'))) {
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
           value = `"${value.replace(/"/g, '""')}"`;
         }
 
