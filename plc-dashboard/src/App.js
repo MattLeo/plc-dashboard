@@ -597,7 +597,6 @@ function App() {
                   {orderedKeys.map(key => (
                     <th 
                       key={key}
-                      onClickCapture={() => handleSort(key)} 
                       style={{ 
                         padding: '12px',
                         textAlign: 'left',
@@ -609,16 +608,18 @@ function App() {
                         backgroundColor: sortConfig.key === key ? '#e9ecef' : 'inherit'
                         //whiteSpace: 'nowrap'
                       }}
-                      title={`Click to sort by ${getFriendlyColumnName(key)}`}
                     >
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
                         <span>{getFriendlyColumnName(key)}</span>
-                        <span style={{ marginleft: '8px', opacity: 0.7}}>
-                          {getSortIcon(key)}
+                        <span 
+                          onClickCapture={() => handleSort(key)}
+                          title={`Click to sort by ${getFriendlyColumnName(key)}`}  
+                          style={{ marginleft: '8px', opacity: 0.7}}>
+                            {getSortIcon(key)}
                         </span>
                       </div>
                       {getFilterComponent(key)}
