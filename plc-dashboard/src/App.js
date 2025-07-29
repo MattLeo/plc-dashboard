@@ -250,6 +250,7 @@ function App() {
             marginTop: '4px'
           }}
         >
+          <option value="">All</option>
           <option value="Automatic">Automatic</option>
           <option value="Manual Up">Manual Up</option>
           <option value="Manual Down">Manual Down</option>
