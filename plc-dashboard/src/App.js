@@ -131,7 +131,7 @@ function App() {
         switch (key) {
           case 'timestamp':
             const recordDate = new Date(recordValue).toLocaleDateString();
-            return recordDate.toLocaleLowerCase().includes(filterValue.toLocaleLowerCase()); 
+            return recordDate.toLowerCase().includes(filterValue.toLowerCase()); 
           case 'deviceId':
           case 'balerMode':
             return String(recordValue).toLowerCase().includes(filterValue.toLowerCase());
@@ -308,7 +308,7 @@ function App() {
     setCurrentPage(1);
   };
 
-  const paginationControls = () => {
+  const PaginationControls = () => {
     const totalPages = getTotalPages();
     const filteredRecordsCount = getSortedAndFilteredRecords().length;
 
@@ -358,13 +358,13 @@ function App() {
       }}>
         {/*Records per page selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px'}}>
-          <span style={{ fontsize: '14px' }}>Show:</span>
+          <span style={{ fontSize: '14px' }}>Show:</span>
           <select
             value={recordsPerPage}
             onChange={(e) => handleRecordsPerPageChange(Number(e.target.value))}
             style={{
               padding:'4px 8px',
-              border: '1px soliu #ccc',
+              border: '1px solid #ccc',
               borderRadius: '3px',
               fontSize: '14px'
             }}
@@ -377,7 +377,7 @@ function App() {
           <span style={{ fontSize: '14px'}}>Records per page</span>
         </div>
         {/* Page Info*/}
-        <div style={{ fontsize: '14px', color: '#666' }}>
+        <div style={{ fontSize: '14px', color: '#666' }}>
           Showing {startRecord}-{endRecord} of {filteredRecordsCount} records
         </div>
         {/* Pagination buttons */}
@@ -834,7 +834,7 @@ function App() {
                           <span 
                             onClickCapture={() => handleSort(key)}
                             title={`Click to sort by ${getFriendlyColumnName(key)}`}  
-                            style={{ marginleft: '8px', opacity: 0.7, cursor: 'pointer'}}>
+                            style={{ marginLeft: '8px', opacity: 0.7, cursor: 'pointer'}}>
                               {getSortIcon(key)}
                           </span>
                         </div>
@@ -847,7 +847,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {getPaginatedRecords.map((record, index) => ( //Flagging this
+                {getPaginatedRecords().map((record, index) => ( //Flagging this
                   <tr key={index} style={{ 
                     borderBottom: '1px solid #dee2e6',
                     backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa'
@@ -866,7 +866,7 @@ function App() {
             </table>
           </div>
         )}
-        <paginationControlls/>
+        <PaginationControls/>
       </div>
     </div>
   );
