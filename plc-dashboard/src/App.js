@@ -74,7 +74,7 @@ function App() {
         : value;
       case 'runtime':
         try{
-          const time = value / 1000; //Added to account for time miscalc in the cycle Lambda
+          const time = value; //Added to account for time miscalc in the cycle Lambda
           const hrs = Math.floor(time / 3600);
           const min = Math.floor((time % 3600) / 60);
           const secs = time % 60;
