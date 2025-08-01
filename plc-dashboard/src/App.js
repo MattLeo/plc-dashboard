@@ -36,7 +36,7 @@ function App() {
     'maxPressure': 'Max Pressure (PSI)',
     'lowMagSwitchFailed': 'Lower Mag Switch Failed',
     'upMagSwitchFailed': 'Upper Mag Switch Failed',
-    'full': 'Full Bale Alert',
+    'full': 'Full Alert',
     'balerMode': 'Mode Setting'
   };
 
