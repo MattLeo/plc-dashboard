@@ -97,17 +97,27 @@ function App() {
     return columnMappings[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
   };
 
+  const getAllKeys = () => {
+    const allKeys = new Set();
+
+    records.forEach(record => {
+      Object.keys(record).forEach(key => {
+        allKeys.add(key)})
+    });
+    return Array.from(allKeys);
+  };
+
   const getOrderedKeys = (record) => {
-    const recordKeys = Object.keys(record);
+    const allKeys = getAllKeys();
     const orderedKeys = [];
 
     balerColumnOrder.forEach(key => {
-      if (recordKeys.includes(key)) {
+      if (allKeys.includes(key)) {
         orderedKeys.push(key);
       }
     });
 
-    recordKeys.forEach(key => {
+    allKeys.forEach(key => {
       if(!orderedKeys.includes(key)) {
         orderedKeys.push(key);
       }
