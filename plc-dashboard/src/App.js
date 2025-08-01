@@ -796,7 +796,17 @@ function App() {
 
       {/* Records Table */}
       <div>
-        <h2>Records ({totalFilteredRecords} of {records.length}) - Page {currentPage} of {getTotalPages()}</h2>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
+          marginBottom: '15px'
+        }}>
+          <h2>Records ({totalFilteredRecords} of {records.length}) - Page {currentPage} of {getTotalPages()}</h2>
+          <PaginationControls/>
+        </div>
         {records.length === 0 ? (
           <p>No records found.</p>
         ) : totalFilteredRecords === 0 ? (
