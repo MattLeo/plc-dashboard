@@ -202,7 +202,15 @@ function App() {
   const getFilterComponent = (key) => {
     const currentFilter = filters[key] || '';
 
-    if (['lowMagSwitchFailed', 'upMagSwitchFailed', 'full'].includes(key)) {
+    if ([
+        'lowMagSwitchFailed', 
+        'upMagSwitchFailed', 
+        'full', 
+        'threeQuartersFull', 
+        'stopButtonWhileStarting', 
+        'cycleEndedEarly',
+        'retractPressureExceeded'
+      ].includes(key)) {
       return (
         <select
           value={currentFilter}
