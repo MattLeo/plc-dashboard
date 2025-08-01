@@ -40,19 +40,24 @@ function App() {
     'balerMode': 'Mode Setting'
   };
 
-  const balerColumnOrder = [
+  const columnOrder = [
     'timestamp',
     'machineType',
     'deviceId',
     'balerMode',
     'numStarts',
     'cycles',
+    'cycleTime',
     'runtime',
     'numBales',
     'maxPressure',
     'full',
+    'threeQuartersFull',
     'lowMagSwitchFailed',
-    'upMagSwitchFailed'
+    'upMagSwitchFailed',
+    'stopButtonWhileStarting',
+    'retractPressureExceeded',
+    'cycleEndedEarly'
   ];
 
   const formatCellValue = (key, value) => {
@@ -111,7 +116,7 @@ function App() {
     const allKeys = getAllKeys();
     const orderedKeys = [];
 
-    balerColumnOrder.forEach(key => {
+    columnOrder.forEach(key => {
       if (allKeys.includes(key)) {
         orderedKeys.push(key);
       }
