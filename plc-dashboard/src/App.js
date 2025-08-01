@@ -631,22 +631,6 @@ function App() {
     setSortConfig({key, direction});
   };
 
-  /*
-  const getSortedRecords = () => {
-    if (!sortConfig.key) return records;
-
-    return [...records].sort((a, b) => {
-      const aValue = getSortValue(a, sortConfig.key);
-      const bValue = getSortValue(b, sortConfig.key);
-
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
- 
-  };
-  */
-
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return '↕️'; // default sorting Icon
     return sortConfig.direction === 'asc' ? '▲' : '▼';
@@ -659,7 +643,7 @@ function App() {
     && filters[key] !== '' && filters[key] !== 'all').length;
     
   return (
-    <div style={{ padding: '20px', maxWidth: '1500px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '1800px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
