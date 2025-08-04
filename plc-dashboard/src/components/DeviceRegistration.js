@@ -85,4 +85,4 @@ function DeviceRegistration({ user }) {
   );
 }
 
-export { DeviceRegistration };
+export default DeviceRegistration;

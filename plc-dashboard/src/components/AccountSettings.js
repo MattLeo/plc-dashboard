@@ -86,4 +86,4 @@ function AccountSettings({ user }) {
   );
 }
 
-export { AccountSettings };
+export default AccountSettings;
