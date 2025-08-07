@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { signOut, fetchAuthSession } from 'aws-amplify/auth';
 
@@ -27,23 +27,7 @@ function DeviceRegistration({ user }) {
     }
   };
 
-  // Fetch locations and devices on component mount
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([fetchLocations(), fetchDevices()]);
-    } catch (err) {
-      setError('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getAuthHeaders = async () => {
+  const getAuthHeaders = useCallback(async () => {
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
@@ -60,9 +44,9 @@ function DeviceRegistration({ user }) {
       console.error('Error getting auth token:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
       
@@ -81,9 +65,9 @@ function DeviceRegistration({ user }) {
       console.error('Error fetching locations:', error);
       throw error;
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
       
@@ -102,7 +86,23 @@ function DeviceRegistration({ user }) {
       console.error('Error fetching devices:', error);
       throw error;
     }
-  };
+  }, [getAuthHeaders]);
+
+  // Fetch locations and devices on component mount
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([fetchLocations(), fetchDevices()]);
+    } catch (err) {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchLocations, fetchDevices]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -159,7 +159,7 @@ function DeviceRegistration({ user }) {
     }
   };
 
-  const toggleDeviceStatus = async (deviceId, currentStatus) => {
+  const toggleDeviceStatus = useCallback(async (deviceId, currentStatus) => {
     try {
       const headers = await getAuthHeaders();
       
@@ -179,7 +179,7 @@ function DeviceRegistration({ user }) {
     } catch (error) {
       setError(error.message);
     }
-  };
+  }, [getAuthHeaders, fetchDevices]);
 
   if (loading) {
     return (
