@@ -46,11 +46,13 @@ function DeviceRegistration({ user }) {
     }
   }, []);
 
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod';
+  
   const fetchLocations = useCallback(async () => {
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch('/prod/locations', {
+      const response = await fetch(`${API_BASE_URL}/locations`, {
         method: 'GET',
         headers
       });
@@ -71,10 +73,15 @@ function DeviceRegistration({ user }) {
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch('/prod/devices', {
+      console.log('Fetching devices from:', `${API_BASE_URL}/devices`);
+      
+      const response = await fetch(`${API_BASE_URL}/devices`, {
         method: 'GET',
         headers
       });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch devices: ${response.status}`);
@@ -88,7 +95,6 @@ function DeviceRegistration({ user }) {
     }
   }, [getAuthHeaders]);
 
-  // Fetch locations and devices on component mount
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -127,7 +133,7 @@ function DeviceRegistration({ user }) {
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch('/prod/devices/register', {
+      const response = await fetch(`${API_BASE_URL}/devices/register`, {
         method: 'POST',
         headers,
         body: JSON.stringify(formData)
@@ -163,7 +169,7 @@ function DeviceRegistration({ user }) {
     try {
       const headers = await getAuthHeaders();
       
-      const response = await fetch(`/prod/devices/${deviceId}`, {
+      const response = await fetch(`${API_BASE_URL}/devices/${deviceId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ isActive: !currentStatus })
