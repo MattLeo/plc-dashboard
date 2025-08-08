@@ -37,13 +37,28 @@ function AccountSettings({ user }) {
   const userRole = user.signInUserSession?.idToken?.payload['custom:role'];
   const orgId = user.signInUserSession?.idToken?.payload['custom:org_id'];
 
+  // Debug logging - remove after testing
+  console.log('=== ACCOUNT SETTINGS DEBUG ===');
+  console.log('Full user object:', user);
+  console.log('signInUserSession:', user.signInUserSession);
+  console.log('idToken payload:', user.signInUserSession?.idToken?.payload);
+  console.log('Extracted userRole:', userRole);
+  console.log('Extracted orgId:', orgId);
+  console.log('============================');
+
   useEffect(() => {
+    console.log('useEffect triggered - orgId:', orgId, 'userRole:', userRole);
     if (orgId) {
+      console.log('Calling fetchOrganizationData...');
       fetchOrganizationData();
+      console.log('Calling fetchLocations...');
       fetchLocations();
       if (['org_admin', 'site_admin'].includes(userRole)) {
+        console.log('Calling fetchUsers...');
         fetchUsers();
       }
+    } else {
+      console.log('No orgId found, skipping API calls');
     }
   }, [orgId, userRole]);
 
@@ -56,6 +71,8 @@ function AccountSettings({ user }) {
 
   const getAuthHeaders = () => {
     const token = user.signInUserSession?.idToken?.jwtToken;
+    console.log('Getting auth headers - token available:', !!token);
+    console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'No token');
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -64,13 +81,22 @@ function AccountSettings({ user }) {
 
   const fetchOrganizationData = async () => {
     try {
+      console.log('fetchOrganizationData starting...');
       setLoading(true);
+      const headers = getAuthHeaders();
+      console.log('Making request to:', 'https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/profile');
+      console.log('Request headers:', headers);
+      
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/profile', {
-        headers: getAuthHeaders()
+        headers: headers
       });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Organization data received:', data);
         setOrgData(data.organization);
         setOrgForm({
           orgName: data.organization.org_name || '',
@@ -79,8 +105,13 @@ function AccountSettings({ user }) {
           state: data.organization.state || '',
           zipCode: data.organization.zip_code || ''
         });
+      } else {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        setError(`Failed to fetch organization data: ${response.status}`);
       }
     } catch (err) {
+      console.error('fetchOrganizationData error:', err);
       setError('Failed to fetch organization data');
     } finally {
       setLoading(false);
@@ -89,31 +120,45 @@ function AccountSettings({ user }) {
 
   const fetchLocations = async () => {
     try {
+      console.log('fetchLocations starting...');
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/locations', {
         headers: getAuthHeaders()
       });
       
+      console.log('Locations response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Locations data received:', data);
         setLocations(data.locations || []);
+      } else {
+        const errorData = await response.text();
+        console.error('Locations error response:', errorData);
       }
     } catch (err) {
-      console.error('Failed to fetch locations:', err);
+      console.error('fetchLocations error:', err);
     }
   };
 
   const fetchUsers = async () => {
     try {
+      console.log('fetchUsers starting...');
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/users', {
         headers: getAuthHeaders()
       });
       
+      console.log('Users response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Users data received:', data);
         setUsers(data.users || []);
+      } else {
+        const errorData = await response.text();
+        console.error('Users error response:', errorData);
       }
     } catch (err) {
-      console.error('Failed to fetch users:', err);
+      console.error('fetchUsers error:', err);
     }
   };
 
