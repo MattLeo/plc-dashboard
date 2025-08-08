@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { signOut, getCurrentUser } from 'aws-amplify/auth';
+import { signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 
 function AccountSettings({ user }) {
   const [activeTab, setActiveTab] = useState('organization');
@@ -11,6 +12,7 @@ function AccountSettings({ user }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const [authSession, setAuthSession] = useState(null);
 
   // Form states
   const [orgForm, setOrgForm] = useState({
@@ -34,43 +36,52 @@ function AccountSettings({ user }) {
   const [editingUser, setEditingUser] = useState(null);
   const [editingUserRole, setEditingUserRole] = useState('');
 
-  // Get user role from the current user session
-  const userRole = currentUser?.signInUserSession?.idToken?.payload['custom:role'];
-  const orgId = currentUser?.signInUserSession?.idToken?.payload['custom:org_id'];
+  // Get user role from the auth session
+  const userRole = authSession?.tokens?.idToken?.payload['custom:role'];
+  const orgId = authSession?.tokens?.idToken?.payload['custom:org_id'];
 
-  // Fetch current user with session on component mount
+  // Fetch current user and auth session on component mount
   useEffect(() => {
-    const fetchCurrentUser = async () => {
+    const fetchUserAndSession = async () => {
       try {
-        console.log('Fetching current user...');
+        console.log('Fetching current user and session...');
         setLoading(true);
-        const authUser = await getCurrentUser();
+        
+        const [authUser, session] = await Promise.all([
+          getCurrentUser(),
+          fetchAuthSession()
+        ]);
+        
         console.log('Current user fetched:', authUser);
+        console.log('Auth session fetched:', session);
+        console.log('ID Token payload:', session.tokens?.idToken?.payload);
+        
         setCurrentUser(authUser);
+        setAuthSession(session);
       } catch (error) {
-        console.error('Error fetching current user:', error);
+        console.error('Error fetching current user/session:', error);
         setError('Failed to load user session');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCurrentUser();
+    fetchUserAndSession();
   }, []);
 
   // Debug logging
   console.log('=== ACCOUNT SETTINGS DEBUG ===');
   console.log('Passed user prop:', user);
   console.log('Current user state:', currentUser);
-  console.log('signInUserSession:', currentUser?.signInUserSession);
-  console.log('idToken payload:', currentUser?.signInUserSession?.idToken?.payload);
+  console.log('Auth session:', authSession);
+  console.log('ID Token payload:', authSession?.tokens?.idToken?.payload);
   console.log('Extracted userRole:', userRole);
   console.log('Extracted orgId:', orgId);
   console.log('============================');
 
   useEffect(() => {
     console.log('useEffect triggered - orgId:', orgId, 'userRole:', userRole, 'currentUser:', !!currentUser);
-    if (currentUser && orgId) {
+    if (currentUser && authSession && orgId) {
       console.log('Calling fetchOrganizationData...');
       fetchOrganizationData();
       console.log('Calling fetchLocations...');
@@ -80,9 +91,9 @@ function AccountSettings({ user }) {
         fetchUsers();
       }
     } else {
-      console.log('Not ready for API calls - currentUser:', !!currentUser, 'orgId:', orgId);
+      console.log('Not ready for API calls - currentUser:', !!currentUser, 'authSession:', !!authSession, 'orgId:', orgId);
     }
-  }, [orgId, userRole, currentUser]);
+  }, [orgId, userRole, currentUser, authSession]);
 
   // Set default tab based on user role
   useEffect(() => {
@@ -92,7 +103,7 @@ function AccountSettings({ user }) {
   }, [userRole]);
 
   const getAuthHeaders = () => {
-    const token = currentUser?.signInUserSession?.idToken?.jwtToken;
+    const token = authSession?.tokens?.idToken?.toString();
     console.log('Getting auth headers - token available:', !!token);
     console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'No token');
     return {
