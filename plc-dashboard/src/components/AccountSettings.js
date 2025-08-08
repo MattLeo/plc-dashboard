@@ -6,8 +6,8 @@ function AccountSettings({ user }) {
   const [activeTab, setActiveTab] = useState('organization');
   const [loading, setLoading] = useState(false);
   const [orgData, setOrgData] = useState(null);
-  const [allOrganizations, setAllOrganizations] = useState([]); // For site_admin
-  const [selectedOrgId, setSelectedOrgId] = useState(null); // For site_admin org selection
+  const [allOrganizations, setAllOrganizations] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [locations, setLocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
@@ -15,7 +15,6 @@ function AccountSettings({ user }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [authSession, setAuthSession] = useState(null);
 
-  // Form states
   const [orgForm, setOrgForm] = useState({
     orgName: '',
     address: '',
@@ -37,26 +36,17 @@ function AccountSettings({ user }) {
   const [editingUser, setEditingUser] = useState(null);
   const [editingUserRole, setEditingUserRole] = useState('');
 
-  // Get user role from the auth session
   const userRole = authSession?.tokens?.idToken?.payload['custom:role'];
   const orgId = authSession?.tokens?.idToken?.payload['custom:org_id'];
 
-  // Fetch current user and auth session on component mount
   useEffect(() => {
     const fetchUserAndSession = async () => {
       try {
-        console.log('Fetching current user and session...');
         setLoading(true);
-        
         const [authUser, session] = await Promise.all([
           getCurrentUser(),
           fetchAuthSession()
         ]);
-        
-        console.log('Current user fetched:', authUser);
-        console.log('Auth session fetched:', session);
-        console.log('ID Token payload:', session.tokens?.idToken?.payload);
-        
         setCurrentUser(authUser);
         setAuthSession(session);
       } catch (error) {
@@ -66,111 +56,68 @@ function AccountSettings({ user }) {
         setLoading(false);
       }
     };
-
     fetchUserAndSession();
   }, []);
 
-  // Debug logging
-  console.log('=== ACCOUNT SETTINGS DEBUG ===');
-  console.log('Passed user prop:', user);
-  console.log('Current user state:', currentUser);
-  console.log('Auth session:', authSession);
-  console.log('ID Token payload:', authSession?.tokens?.idToken?.payload);
-  console.log('Extracted userRole:', userRole);
-  console.log('Extracted orgId:', orgId);
-  console.log('============================');
-
   useEffect(() => {
-    console.log('useEffect triggered - orgId:', orgId, 'userRole:', userRole, 'currentUser:', !!currentUser);
     if (currentUser && authSession && userRole) {
       if (userRole === 'site_admin') {
-        console.log('Site admin - fetching all organizations...');
         fetchAllOrganizations();
-        fetchUsers(); // Site admin can see all users
+        fetchUsers();
       } else if (orgId) {
-        console.log('Regular user - fetching assigned organization...');
         fetchOrganizationData();
         fetchLocations();
         if (['org_admin'].includes(userRole)) {
           fetchUsers();
         }
       }
-    } else {
-      console.log('Not ready for API calls - currentUser:', !!currentUser, 'authSession:', !!authSession, 'userRole:', userRole);
     }
   }, [orgId, userRole, currentUser, authSession]);
 
-  // For site_admin: when they select an organization, fetch its details
   useEffect(() => {
     if (userRole === 'site_admin' && selectedOrgId) {
-      console.log('Site admin selected org:', selectedOrgId);
       fetchSpecificOrganizationData(selectedOrgId);
       fetchSpecificLocations(selectedOrgId);
     }
   }, [selectedOrgId, userRole]);
 
-  // Set default tab based on user role
-  useEffect(() => {
-    if (userRole && !['org_admin', 'site_admin'].includes(userRole) && activeTab === 'organization') {
-      setActiveTab('profile');
-    }
-  }, [userRole]);
-
   const getAuthHeaders = () => {
     const token = authSession?.tokens?.idToken?.toString();
-    console.log('Getting auth headers - token available:', !!token);
-    console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'No token');
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
   };
 
-  // NEW: Fetch all organizations (for site_admin)
   const fetchAllOrganizations = async () => {
     try {
-      console.log('fetchAllOrganizations starting...');
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organizations', {
         headers: getAuthHeaders()
       });
       
-      console.log('All organizations response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('All organizations data received:', data);
         setAllOrganizations(data.organizations || []);
-        
-        // Auto-select the first organization if none selected
         if (data.organizations && data.organizations.length > 0 && !selectedOrgId) {
           setSelectedOrgId(data.organizations[0].org_id);
         }
       } else {
-        const errorData = await response.text();
-        console.error('All organizations error response:', errorData);
         setError('Failed to fetch organizations');
       }
     } catch (err) {
-      console.error('fetchAllOrganizations error:', err);
       setError('Failed to fetch organizations');
     }
   };
 
-  // NEW: Fetch specific organization data (for site_admin)
   const fetchSpecificOrganizationData = async (targetOrgId) => {
     try {
-      console.log('fetchSpecificOrganizationData starting for org:', targetOrgId);
       setLoading(true);
-      
       const response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${targetOrgId}/profile`, {
         headers: getAuthHeaders()
       });
       
-      console.log('Specific org response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Specific organization data received:', data);
         setOrgData(data.organization);
         setOrgForm({
           orgName: data.organization.org_name || '',
@@ -180,60 +127,39 @@ function AccountSettings({ user }) {
           zipCode: data.organization.zip_code || ''
         });
       } else {
-        const errorData = await response.text();
-        console.error('Specific org error response:', errorData);
         setError(`Failed to fetch organization data: ${response.status}`);
       }
     } catch (err) {
-      console.error('fetchSpecificOrganizationData error:', err);
       setError('Failed to fetch organization data');
     } finally {
       setLoading(false);
     }
   };
 
-  // NEW: Fetch locations for specific organization (for site_admin)
   const fetchSpecificLocations = async (targetOrgId) => {
     try {
-      console.log('fetchSpecificLocations starting for org:', targetOrgId);
       const response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${targetOrgId}/locations`, {
         headers: getAuthHeaders()
       });
       
-      console.log('Specific locations response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Specific locations data received:', data);
         setLocations(data.locations || []);
-      } else {
-        const errorData = await response.text();
-        console.error('Specific locations error response:', errorData);
       }
     } catch (err) {
       console.error('fetchSpecificLocations error:', err);
     }
   };
 
-  // EXISTING: Fetch organization data for regular users
   const fetchOrganizationData = async () => {
     try {
-      console.log('fetchOrganizationData starting...');
       setLoading(true);
-      const headers = getAuthHeaders();
-      console.log('Making request to:', 'https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/profile');
-      console.log('Request headers:', headers);
-      
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/profile', {
-        headers: headers
+        headers: getAuthHeaders()
       });
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Organization data received:', data);
         setOrgData(data.organization);
         setOrgForm({
           orgName: data.organization.org_name || '',
@@ -243,12 +169,9 @@ function AccountSettings({ user }) {
           zipCode: data.organization.zip_code || ''
         });
       } else {
-        const errorData = await response.text();
-        console.error('Error response:', errorData);
         setError(`Failed to fetch organization data: ${response.status}`);
       }
     } catch (err) {
-      console.error('fetchOrganizationData error:', err);
       setError('Failed to fetch organization data');
     } finally {
       setLoading(false);
@@ -257,20 +180,13 @@ function AccountSettings({ user }) {
 
   const fetchLocations = async () => {
     try {
-      console.log('fetchLocations starting...');
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/locations', {
         headers: getAuthHeaders()
       });
       
-      console.log('Locations response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Locations data received:', data);
         setLocations(data.locations || []);
-      } else {
-        const errorData = await response.text();
-        console.error('Locations error response:', errorData);
       }
     } catch (err) {
       console.error('fetchLocations error:', err);
@@ -279,27 +195,19 @@ function AccountSettings({ user }) {
 
   const fetchUsers = async () => {
     try {
-      console.log('fetchUsers starting...');
       const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/users', {
         headers: getAuthHeaders()
       });
       
-      console.log('Users response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('Users data received:', data);
         setUsers(data.users || []);
-      } else {
-        const errorData = await response.text();
-        console.error('Users error response:', errorData);
       }
     } catch (err) {
       console.error('fetchUsers error:', err);
     }
   };
 
-  // MODIFIED: Handle organization update with different endpoints
   const handleUpdateOrganization = async (e) => {
     e.preventDefault();
     try {
@@ -310,14 +218,12 @@ function AccountSettings({ user }) {
       let response;
       
       if (userRole === 'site_admin' && selectedOrgId) {
-        // Site admin updating specific organization
         response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${selectedOrgId}/update`, {
           method: 'PUT',
           headers: getAuthHeaders(),
           body: JSON.stringify(orgForm)
         });
       } else {
-        // Org admin updating their own organization
         response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/update', {
           method: 'PUT',
           headers: getAuthHeaders(),
@@ -340,7 +246,6 @@ function AccountSettings({ user }) {
     }
   };
 
-  // EXISTING: All other handlers stay the same
   const handleCreateLocation = async (e) => {
     e.preventDefault();
     try {
@@ -367,7 +272,6 @@ function AccountSettings({ user }) {
           zipCode: ''
         });
         
-        // Refresh locations based on user type
         if (userRole === 'site_admin' && selectedOrgId) {
           fetchSpecificLocations(selectedOrgId);
         } else {
@@ -401,7 +305,6 @@ function AccountSettings({ user }) {
         setMessage('Location updated successfully');
         setEditingLocation(null);
         
-        // Refresh locations based on user type
         if (userRole === 'site_admin' && selectedOrgId) {
           fetchSpecificLocations(selectedOrgId);
         } else {
@@ -439,7 +342,7 @@ function AccountSettings({ user }) {
         setError(data.error || 'Failed to update user role');
       }
     } catch (err) {
-      setError('Failed to update user role - API endpoint not implemented yet');
+      setError('Failed to update user role');
     } finally {
       setLoading(false);
     }
@@ -509,7 +412,6 @@ function AccountSettings({ user }) {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -519,21 +421,14 @@ function AccountSettings({ user }) {
         paddingBottom: '20px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Link
-            to="/"
-            style={{
-              textDecoration: 'none',
-              color: '#007bff',
-              fontSize: '16px'
-            }}
-          >
+          <Link to="/" style={{ textDecoration: 'none', color: '#007bff', fontSize: '16px' }}>
             ← Back to Dashboard
           </Link>
           <h1>Account Settings</h1>
         </div>
         <div>
           <span style={{ marginRight: '20px' }}>
-            Welcome, {currentUser?.signInDetails?.loginId || currentUser?.username || user?.username} ({userRole || 'Loading...'})
+            Welcome, {currentUser?.username || user?.username} ({userRole || 'Loading...'})
           </span>
           <button onClick={handleSignOut} style={dangerButtonStyle}>
             Sign Out
@@ -541,14 +436,12 @@ function AccountSettings({ user }) {
         </div>
       </div>
 
-      {/* Loading state while fetching user */}
       {!currentUser && loading && (
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <p>Loading user session...</p>
         </div>
       )}
 
-      {/* Show error if user fetch failed */}
       {!currentUser && !loading && error && (
         <div style={{
           padding: '20px',
@@ -563,10 +456,8 @@ function AccountSettings({ user }) {
         </div>
       )}
 
-      {/* Main content - only show when currentUser is loaded */}
       {currentUser && (
         <div>
-          {/* Messages */}
           {(message || error) && (
             <div style={{
               padding: '15px',
@@ -593,7 +484,6 @@ function AccountSettings({ user }) {
             </div>
           )}
 
-          {/* Tabs */}
           <div style={{ marginBottom: '20px' }}>
             <button
               style={tabStyle(activeTab === 'organization')}
@@ -617,17 +507,14 @@ function AccountSettings({ user }) {
                 User Management
               </button>
             )}
-            {!(['org_admin', 'site_admin'].includes(userRole)) && (
-              <button
-                style={tabStyle(activeTab === 'profile')}
-                onClick={() => setActiveTab('profile')}
-              >
-                My Profile
-              </button>
-            )}
+            <button
+              style={tabStyle(activeTab === 'profile')}
+              onClick={() => setActiveTab('profile')}
+            >
+              My Profile
+            </button>
           </div>
 
-          {/* Tab Content */}
           <div style={{
             backgroundColor: 'white',
             padding: '30px',
@@ -641,12 +528,10 @@ function AccountSettings({ user }) {
               </div>
             )}
 
-            {/* Organization Tab */}
             {activeTab === 'organization' && !loading && (
               <div>
                 <h3>Organization Management</h3>
                 
-                {/* Site Admin Organization Selector */}
                 {userRole === 'site_admin' && (
                   <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
                     <h4>Select Organization to Manage</h4>
@@ -678,7 +563,6 @@ function AccountSettings({ user }) {
                   </div>
                 )}
 
-                {/* Show organization details when selected/available */}
                 {orgData && (userRole !== 'site_admin' || selectedOrgId) && (
                   <div>
                     <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
@@ -765,7 +649,6 @@ function AccountSettings({ user }) {
                   </div>
                 )}
 
-                {/* Show message for site_admin when no org selected */}
                 {userRole === 'site_admin' && !selectedOrgId && (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
                     <p>Please select an organization to view and manage its details.</p>
@@ -774,12 +657,10 @@ function AccountSettings({ user }) {
               </div>
             )}
 
-            {/* Locations Tab */}
             {activeTab === 'locations' && !loading && (
               <div>
                 <h3>Location Management</h3>
                 
-                {/* Show current organization context */}
                 {orgData && (
                   <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>
                     <p style={{ margin: '0', fontSize: '14px', color: '#333' }}>
@@ -867,7 +748,6 @@ function AccountSettings({ user }) {
                   </div>
                 )}
 
-                {/* Locations List */}
                 <div>
                   <h4>Existing Locations ({locations.length})</h4>
                   {locations.length === 0 ? (
@@ -928,7 +808,6 @@ function AccountSettings({ user }) {
               </div>
             )}
 
-            {/* Users Tab */}
             {activeTab === 'users' && ['org_admin', 'site_admin'].includes(userRole) && !loading && (
               <div>
                 <h3>User Management</h3>
@@ -1035,7 +914,6 @@ function AccountSettings({ user }) {
               </div>
             )}
 
-            {/* Profile Tab for Regular Users */}
             {activeTab === 'profile' && !loading && (
               <div>
                 <h3>My Profile</h3>
@@ -1050,7 +928,7 @@ function AccountSettings({ user }) {
                       Username:
                     </label>
                     <p style={{ margin: '0', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                      {currentUser?.signInDetails?.loginId || currentUser?.username || user?.username}
+                      {currentUser?.username || user?.username}
                     </p>
                   </div>
 
@@ -1112,7 +990,6 @@ function AccountSettings({ user }) {
   );
 }
 
-// Separate component for editing locations (unchanged)
 function LocationEditForm({ location, onSave, onCancel, inputStyle, buttonStyle, secondaryButtonStyle }) {
   const [editForm, setEditForm] = useState({
     storeNumber: location.store_number || '',
