@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
@@ -7,6 +6,8 @@ function AccountSettings({ user }) {
   const [activeTab, setActiveTab] = useState('organization');
   const [loading, setLoading] = useState(false);
   const [orgData, setOrgData] = useState(null);
+  const [allOrganizations, setAllOrganizations] = useState([]); // For site_admin
+  const [selectedOrgId, setSelectedOrgId] = useState(null); // For site_admin org selection
   const [locations, setLocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
@@ -81,19 +82,32 @@ function AccountSettings({ user }) {
 
   useEffect(() => {
     console.log('useEffect triggered - orgId:', orgId, 'userRole:', userRole, 'currentUser:', !!currentUser);
-    if (currentUser && authSession && orgId) {
-      console.log('Calling fetchOrganizationData...');
-      fetchOrganizationData();
-      console.log('Calling fetchLocations...');
-      fetchLocations();
-      if (['org_admin', 'site_admin'].includes(userRole)) {
-        console.log('Calling fetchUsers...');
-        fetchUsers();
+    if (currentUser && authSession && userRole) {
+      if (userRole === 'site_admin') {
+        console.log('Site admin - fetching all organizations...');
+        fetchAllOrganizations();
+        fetchUsers(); // Site admin can see all users
+      } else if (orgId) {
+        console.log('Regular user - fetching assigned organization...');
+        fetchOrganizationData();
+        fetchLocations();
+        if (['org_admin'].includes(userRole)) {
+          fetchUsers();
+        }
       }
     } else {
-      console.log('Not ready for API calls - currentUser:', !!currentUser, 'authSession:', !!authSession, 'orgId:', orgId);
+      console.log('Not ready for API calls - currentUser:', !!currentUser, 'authSession:', !!authSession, 'userRole:', userRole);
     }
   }, [orgId, userRole, currentUser, authSession]);
+
+  // For site_admin: when they select an organization, fetch its details
+  useEffect(() => {
+    if (userRole === 'site_admin' && selectedOrgId) {
+      console.log('Site admin selected org:', selectedOrgId);
+      fetchSpecificOrganizationData(selectedOrgId);
+      fetchSpecificLocations(selectedOrgId);
+    }
+  }, [selectedOrgId, userRole]);
 
   // Set default tab based on user role
   useEffect(() => {
@@ -112,6 +126,96 @@ function AccountSettings({ user }) {
     };
   };
 
+  // NEW: Fetch all organizations (for site_admin)
+  const fetchAllOrganizations = async () => {
+    try {
+      console.log('fetchAllOrganizations starting...');
+      const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organizations', {
+        headers: getAuthHeaders()
+      });
+      
+      console.log('All organizations response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('All organizations data received:', data);
+        setAllOrganizations(data.organizations || []);
+        
+        // Auto-select the first organization if none selected
+        if (data.organizations && data.organizations.length > 0 && !selectedOrgId) {
+          setSelectedOrgId(data.organizations[0].org_id);
+        }
+      } else {
+        const errorData = await response.text();
+        console.error('All organizations error response:', errorData);
+        setError('Failed to fetch organizations');
+      }
+    } catch (err) {
+      console.error('fetchAllOrganizations error:', err);
+      setError('Failed to fetch organizations');
+    }
+  };
+
+  // NEW: Fetch specific organization data (for site_admin)
+  const fetchSpecificOrganizationData = async (targetOrgId) => {
+    try {
+      console.log('fetchSpecificOrganizationData starting for org:', targetOrgId);
+      setLoading(true);
+      
+      const response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${targetOrgId}/profile`, {
+        headers: getAuthHeaders()
+      });
+      
+      console.log('Specific org response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Specific organization data received:', data);
+        setOrgData(data.organization);
+        setOrgForm({
+          orgName: data.organization.org_name || '',
+          address: data.organization.address || '',
+          city: data.organization.city || '',
+          state: data.organization.state || '',
+          zipCode: data.organization.zip_code || ''
+        });
+      } else {
+        const errorData = await response.text();
+        console.error('Specific org error response:', errorData);
+        setError(`Failed to fetch organization data: ${response.status}`);
+      }
+    } catch (err) {
+      console.error('fetchSpecificOrganizationData error:', err);
+      setError('Failed to fetch organization data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Fetch locations for specific organization (for site_admin)
+  const fetchSpecificLocations = async (targetOrgId) => {
+    try {
+      console.log('fetchSpecificLocations starting for org:', targetOrgId);
+      const response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${targetOrgId}/locations`, {
+        headers: getAuthHeaders()
+      });
+      
+      console.log('Specific locations response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Specific locations data received:', data);
+        setLocations(data.locations || []);
+      } else {
+        const errorData = await response.text();
+        console.error('Specific locations error response:', errorData);
+      }
+    } catch (err) {
+      console.error('fetchSpecificLocations error:', err);
+    }
+  };
+
+  // EXISTING: Fetch organization data for regular users
   const fetchOrganizationData = async () => {
     try {
       console.log('fetchOrganizationData starting...');
@@ -195,6 +299,7 @@ function AccountSettings({ user }) {
     }
   };
 
+  // MODIFIED: Handle organization update with different endpoints
   const handleUpdateOrganization = async (e) => {
     e.preventDefault();
     try {
@@ -202,11 +307,23 @@ function AccountSettings({ user }) {
       setMessage('');
       setError('');
 
-      const response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/update', {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(orgForm)
-      });
+      let response;
+      
+      if (userRole === 'site_admin' && selectedOrgId) {
+        // Site admin updating specific organization
+        response = await fetch(`https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/${selectedOrgId}/update`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(orgForm)
+        });
+      } else {
+        // Org admin updating their own organization
+        response = await fetch('https://behhevolhf.execute-api.us-east-1.amazonaws.com/prod/organization/update', {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(orgForm)
+        });
+      }
 
       const data = await response.json();
       
@@ -223,6 +340,7 @@ function AccountSettings({ user }) {
     }
   };
 
+  // EXISTING: All other handlers stay the same
   const handleCreateLocation = async (e) => {
     e.preventDefault();
     try {
@@ -248,7 +366,13 @@ function AccountSettings({ user }) {
           state: '',
           zipCode: ''
         });
-        fetchLocations();
+        
+        // Refresh locations based on user type
+        if (userRole === 'site_admin' && selectedOrgId) {
+          fetchSpecificLocations(selectedOrgId);
+        } else {
+          fetchLocations();
+        }
       } else {
         setError(data.error || 'Failed to create location');
       }
@@ -276,7 +400,13 @@ function AccountSettings({ user }) {
       if (response.ok) {
         setMessage('Location updated successfully');
         setEditingLocation(null);
-        fetchLocations();
+        
+        // Refresh locations based on user type
+        if (userRole === 'site_admin' && selectedOrgId) {
+          fetchSpecificLocations(selectedOrgId);
+        } else {
+          fetchLocations();
+        }
       } else {
         setError(data.error || 'Failed to update location');
       }
@@ -471,7 +601,7 @@ function AccountSettings({ user }) {
             >
               Organization
             </button>
-            {(['org_admin', 'location_manager'].includes(userRole)) && (
+            {(['org_admin', 'location_manager', 'site_admin'].includes(userRole)) && (
               <button
                 style={tabStyle(activeTab === 'locations')}
                 onClick={() => setActiveTab('locations')}
@@ -512,88 +642,133 @@ function AccountSettings({ user }) {
             )}
 
             {/* Organization Tab */}
-            {activeTab === 'organization' && orgData && !loading && (
+            {activeTab === 'organization' && !loading && (
               <div>
-                <h3>Organization Details</h3>
-                <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-                  <p><strong>Organization Code:</strong> {orgData.org_code}</p>
-                  <p><strong>Created:</strong> {new Date(orgData.created_at).toLocaleDateString()}</p>
-                  <p><strong>Status:</strong> {orgData.is_active ? 'Active' : 'Inactive'}</p>
-                </div>
+                <h3>Organization Management</h3>
+                
+                {/* Site Admin Organization Selector */}
+                {userRole === 'site_admin' && (
+                  <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
+                    <h4>Select Organization to Manage</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                      <label style={{ fontWeight: 'bold', minWidth: '150px' }}>
+                        Organization:
+                      </label>
+                      <select
+                        value={selectedOrgId || ''}
+                        onChange={(e) => setSelectedOrgId(e.target.value)}
+                        style={{
+                          ...inputStyle,
+                          marginBottom: '0',
+                          minWidth: '300px',
+                          flex: '1'
+                        }}
+                      >
+                        <option value="">Select an organization...</option>
+                        {allOrganizations.map((org) => (
+                          <option key={org.org_id} value={org.org_id}>
+                            {org.org_name} ({org.org_code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <p style={{ margin: '10px 0 0 0', fontSize: '14px', color: '#666' }}>
+                      As a site administrator, you can manage any organization in the system.
+                    </p>
+                  </div>
+                )}
 
-                {userRole === 'org_admin' ? (
-                  <form onSubmit={handleUpdateOrganization}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                          Organization Name
-                        </label>
-                        <input
-                          type="text"
-                          style={inputStyle}
-                          value={orgForm.orgName}
-                          onChange={(e) => setOrgForm({...orgForm, orgName: e.target.value})}
-                          required
-                        />
-
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                          Address
-                        </label>
-                        <input
-                          type="text"
-                          style={inputStyle}
-                          value={orgForm.address}
-                          onChange={(e) => setOrgForm({...orgForm, address: e.target.value})}
-                        />
-
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                          City
-                        </label>
-                        <input
-                          type="text"
-                          style={inputStyle}
-                          value={orgForm.city}
-                          onChange={(e) => setOrgForm({...orgForm, city: e.target.value})}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          style={inputStyle}
-                          value={orgForm.state}
-                          onChange={(e) => setOrgForm({...orgForm, state: e.target.value})}
-                        />
-
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                          Zip Code
-                        </label>
-                        <input
-                          type="text"
-                          style={inputStyle}
-                          value={orgForm.zipCode}
-                          onChange={(e) => setOrgForm({...orgForm, zipCode: e.target.value})}
-                        />
-                      </div>
+                {/* Show organization details when selected/available */}
+                {orgData && (userRole !== 'site_admin' || selectedOrgId) && (
+                  <div>
+                    <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                      <p><strong>Organization Code:</strong> {orgData.org_code}</p>
+                      <p><strong>Created:</strong> {new Date(orgData.created_at).toLocaleDateString()}</p>
+                      <p><strong>Status:</strong> {orgData.is_active ? 'Active' : 'Inactive'}</p>
                     </div>
 
-                    <button type="submit" style={buttonStyle} disabled={loading}>
-                      {loading ? 'Updating...' : 'Update Organization'}
-                    </button>
-                  </form>
-                ) : (
-                  <div>
-                    <p><strong>Organization Name:</strong> {orgData.org_name}</p>
-                    <p><strong>Address:</strong> {orgData.address || 'Not set'}</p>
-                    <p><strong>City:</strong> {orgData.city || 'Not set'}</p>
-                    <p><strong>State:</strong> {orgData.state || 'Not set'}</p>
-                    <p><strong>Zip Code:</strong> {orgData.zip_code || 'Not set'}</p>
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>
-                      Only organization administrators can edit these details.
-                    </p>
+                    {['org_admin', 'site_admin'].includes(userRole) ? (
+                      <form onSubmit={handleUpdateOrganization}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                              Organization Name
+                            </label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={orgForm.orgName}
+                              onChange={(e) => setOrgForm({...orgForm, orgName: e.target.value})}
+                              required
+                            />
+
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                              Address
+                            </label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={orgForm.address}
+                              onChange={(e) => setOrgForm({...orgForm, address: e.target.value})}
+                            />
+
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                              City
+                            </label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={orgForm.city}
+                              onChange={(e) => setOrgForm({...orgForm, city: e.target.value})}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                              State
+                            </label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={orgForm.state}
+                              onChange={(e) => setOrgForm({...orgForm, state: e.target.value})}
+                            />
+
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                              Zip Code
+                            </label>
+                            <input
+                              type="text"
+                              style={inputStyle}
+                              value={orgForm.zipCode}
+                              onChange={(e) => setOrgForm({...orgForm, zipCode: e.target.value})}
+                            />
+                          </div>
+                        </div>
+
+                        <button type="submit" style={buttonStyle} disabled={loading}>
+                          {loading ? 'Updating...' : 'Update Organization'}
+                        </button>
+                      </form>
+                    ) : (
+                      <div>
+                        <p><strong>Organization Name:</strong> {orgData.org_name}</p>
+                        <p><strong>Address:</strong> {orgData.address || 'Not set'}</p>
+                        <p><strong>City:</strong> {orgData.city || 'Not set'}</p>
+                        <p><strong>State:</strong> {orgData.state || 'Not set'}</p>
+                        <p><strong>Zip Code:</strong> {orgData.zip_code || 'Not set'}</p>
+                        <p style={{ color: '#666', fontStyle: 'italic' }}>
+                          Only organization administrators and site administrators can edit these details.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Show message for site_admin when no org selected */}
+                {userRole === 'site_admin' && !selectedOrgId && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    <p>Please select an organization to view and manage its details.</p>
                   </div>
                 )}
               </div>
@@ -604,7 +779,16 @@ function AccountSettings({ user }) {
               <div>
                 <h3>Location Management</h3>
                 
-                {['org_admin', 'location_manager'].includes(userRole) && (
+                {/* Show current organization context */}
+                {orgData && (
+                  <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>
+                    <p style={{ margin: '0', fontSize: '14px', color: '#333' }}>
+                      <strong>Managing locations for:</strong> {orgData.org_name} ({orgData.org_code})
+                    </p>
+                  </div>
+                )}
+                
+                {['org_admin', 'location_manager', 'site_admin'].includes(userRole) && orgData && (
                   <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
                     <h4>Add New Location</h4>
                     <form onSubmit={handleCreateLocation}>
@@ -687,7 +871,9 @@ function AccountSettings({ user }) {
                 <div>
                   <h4>Existing Locations ({locations.length})</h4>
                   {locations.length === 0 ? (
-                    <p style={{ color: '#666' }}>No locations found.</p>
+                    <p style={{ color: '#666' }}>
+                      {!orgData ? 'Please select an organization to view locations.' : 'No locations found.'}
+                    </p>
                   ) : (
                     <div style={{ display: 'grid', gap: '15px' }}>
                       {locations.map((location) => (
@@ -850,7 +1036,7 @@ function AccountSettings({ user }) {
             )}
 
             {/* Profile Tab for Regular Users */}
-            {activeTab === 'profile' && !['org_admin', 'site_admin'].includes(userRole) && !loading && (
+            {activeTab === 'profile' && !loading && (
               <div>
                 <h3>My Profile</h3>
                 <div style={{
@@ -926,7 +1112,7 @@ function AccountSettings({ user }) {
   );
 }
 
-// Separate component for editing locations
+// Separate component for editing locations (unchanged)
 function LocationEditForm({ location, onSave, onCancel, inputStyle, buttonStyle, secondaryButtonStyle }) {
   const [editForm, setEditForm] = useState({
     storeNumber: location.store_number || '',
