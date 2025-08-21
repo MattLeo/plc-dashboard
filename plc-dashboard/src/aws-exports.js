@@ -10,8 +10,8 @@ const awsmobile = {
             "openid",
             "email"
         ],
-        "redirectSignIn": "https://v0-5.d175kvisuax4ef.amplifyapp.com/",
-        "redirectSignOut": "https://v0-5.d175kvisuax4ef.amplifyapp.com/",
+        "redirectSignIn": "https://main.d175kvisuax4ef.amplifyapp.com/",
+        "redirectSignOut": "https://main.d175kvisuax4ef.amplifyapp.com/",
         "responseType": "code"
     },
     "aws_cognito_username_attributes": [],
